@@ -7,7 +7,7 @@ const cesiumPackagePath = require.resolve('cesium/package.json');
 const cesiumRoot = path.dirname(cesiumPackagePath);
 const cesiumBuildRoot = path.join(cesiumRoot, 'Build', 'Cesium');
 const targetRoot = path.resolve('examples/vue3/public/cesium');
-// 这些目录是 Cesium 运行时按 CESIUM_BASE_URL 动态请求的资源。
+// 这些目录是 Cesium 运行时按 CESIUM_BASE_URL 动态请求的资源
 const assetDirs = ['Workers', 'ThirdParty', 'Assets', 'Widgets'];
 
 rmSync(targetRoot, {

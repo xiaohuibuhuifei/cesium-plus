@@ -1,6 +1,6 @@
 # API
 
-Cesium Plus 只管理调用方传入的 Cesium `Viewer` 上的增强插件。它不创建、不销毁、不替换 `Viewer`，也不隐藏 Cesium 静态资源配置。
+Cesium Plus 只绑定调用方传入的 Cesium `Viewer`，在 `CesiumPlus` 上提供少量内置能力，并通过插件系统管理可释放的扩展能力。它不创建、不销毁、不替换 `Viewer`，也不隐藏 Cesium 静态资源配置。
 
 ## create
 
@@ -20,6 +20,8 @@ class CesiumPlus {
   readonly viewer: Viewer;
   readonly disposed: boolean;
   readonly pluginNames: readonly string[];
+  readonly capture: CesiumPlusCapture;
+  readonly coordinates: CesiumPlusCoordinates;
 
   use(plugin: CesiumPlusPlugin): this;
   dispose(): void;
@@ -37,6 +39,29 @@ class CesiumPlus {
 ### pluginNames
 
 已安装插件名，按安装顺序返回。插件释放后会清空。
+
+### capture
+
+内置画布捕获能力，不需要通过插件安装。截图会请求下一帧渲染，并在 `postRender` 后读取 canvas，避免把截图命令伪装成插件生命周期。
+
+```ts
+const dataUrl = await plus.capture.screenshot();
+await plus.capture.downloadScreenshot({ filename: 'map.png' });
+```
+
+### coordinates
+
+内置坐标能力，不需要通过插件安装。`watch()` 会监听鼠标移动并返回清理函数；如果调用方没有手动清理，`CesiumPlus.dispose()` 会兜底释放。
+
+```ts
+const stopWatching = plus.coordinates.watch({
+  onMove({ longitude, latitude, height }) {
+    console.log(longitude, latitude, height);
+  },
+});
+
+stopWatching();
+```
 
 ### use
 
@@ -59,6 +84,48 @@ function definePlugin(plugin: CesiumPlusPlugin): CesiumPlusPlugin;
 ```
 
 校验并返回原插件对象。这个函数不安装插件，只用于让插件定义处更明确。
+
+## Capture
+
+```ts
+interface CesiumPlusCapture {
+  screenshot(options?: ScreenshotOptions): Promise<string>;
+  downloadScreenshot(options?: DownloadScreenshotOptions): Promise<string>;
+}
+
+interface ScreenshotOptions {
+  readonly type?: string;
+  readonly quality?: number;
+}
+
+interface DownloadScreenshotOptions extends ScreenshotOptions {
+  readonly filename?: string;
+}
+```
+
+`screenshot()` 默认返回 PNG data URL。`type` 和 `quality` 会直接传给 canvas `toDataURL`。`downloadScreenshot()` 复用同一次截图并触发浏览器下载，默认文件名是 `cesium-plus-screenshot.png`。
+
+如果宿主关闭默认渲染循环或浏览器仍返回黑图，可以在创建 `Viewer` 时把 WebGL `preserveDrawingBuffer` 作为兜底配置；正常路径不要求它。
+
+## Coordinates
+
+```ts
+interface CesiumPlusCoordinates {
+  watch(options: CoordinateWatchOptions): CesiumPlusCleanup;
+}
+
+interface CoordinateWatchOptions {
+  readonly onMove: (coord: CoordinatePosition) => void;
+}
+
+interface CoordinatePosition {
+  readonly longitude: number;
+  readonly latitude: number;
+  readonly height: number;
+}
+```
+
+`coordinates.watch()` 从 Cesium `pickPosition` 读取鼠标所在位置，回调中的 `longitude` / `latitude` 为角度值，`height` 为 Cesium 返回的高度。
 
 ## Types
 

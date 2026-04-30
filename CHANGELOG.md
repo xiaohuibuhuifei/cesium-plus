@@ -7,8 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- `coordinateReadout` plugin: mouse-move coordinate readout (longitude, latitude, height).
-- `screenshot` plugin: on-demand canvas screenshot via `takeScreenshot()`.
+- `CesiumPlus.capture`: on-demand canvas screenshot and download helpers.
+- `CesiumPlus.coordinates`: mouse-move coordinate watch helpers.
 
 ## 0.1.0 - TBD
 

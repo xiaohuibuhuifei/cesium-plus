@@ -10,7 +10,7 @@ export default defineConfig({
   root,
   plugins: [vue()],
   define: {
-    // 与 scripts/copy-cesium-assets.mjs 的目标目录保持一致。
+    // 与 scripts/copy-cesium-assets.mjs 的目标目录保持一致
     CESIUM_BASE_URL: JSON.stringify('/cesium/'),
   },
   publicDir: 'public',
@@ -20,11 +20,12 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // 示例开发时直接指向源码，避免必须先发布或 npm link。
+      // 示例开发时直接指向源码，避免必须先发布或 npm link
       'cesium-plus': path.resolve(root, '../../src/index.ts'),
     },
   },
   build: {
+    chunkSizeWarningLimit: 5000,
     emptyOutDir: true,
     outDir: 'dist',
   },

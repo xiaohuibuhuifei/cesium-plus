@@ -1,5 +1,10 @@
 import type { Viewer } from 'cesium';
 
+import { createCapture } from './modules/capture.js';
+import type { CesiumPlusCapture } from './modules/capture.js';
+import { createCoordinates } from './modules/coordinates.js';
+import type { CesiumPlusCoordinates } from './modules/coordinates.js';
+
 export type CesiumPlusCleanup = () => void;
 
 export interface CesiumPlusPluginContext {
@@ -13,14 +18,22 @@ export interface CesiumPlusPlugin {
 }
 
 export class CesiumPlus {
-  // 插件按名称去重，避免同一个增强能力被重复安装到同一个 Viewer。
+  // 插件按名称去重，避免同一个增强能力被重复安装到同一个 Viewer
   readonly #plugins = new Map<string, CesiumPlusCleanup | undefined>();
+  readonly #moduleCleanups: CesiumPlusCleanup[] = [];
   #disposed = false;
+  public readonly capture: CesiumPlusCapture;
+  public readonly coordinates: CesiumPlusCoordinates;
 
   public constructor(public readonly viewer: Viewer) {
     if (!viewer) {
       throw new TypeError('CesiumPlus 需要一个 Cesium Viewer。');
     }
+
+    this.capture = createCapture(viewer, () => this.#assertActive());
+    const coordinates = createCoordinates(viewer, () => this.#assertActive());
+    this.coordinates = coordinates;
+    this.#moduleCleanups.push(() => coordinates.dispose());
   }
 
   public get disposed(): boolean {
@@ -50,7 +63,7 @@ export class CesiumPlus {
       );
     }
 
-    // 插件可以没有释放逻辑；内部统一成 undefined，避免 void 类型污染插件表。
+    // 插件可以没有释放逻辑；内部统一成 undefined，避免 void 类型污染插件表
     const installedCleanup =
       typeof cleanup === 'function' ? cleanup : undefined;
     this.#plugins.set(plugin.name, installedCleanup);
@@ -63,13 +76,15 @@ export class CesiumPlus {
     }
 
     this.#disposed = true;
-    // 后安装的插件通常依赖先安装的插件，释放时必须反向执行。
-    const cleanups = [...this.#plugins.values()].reverse();
+    // 后安装的插件通常依赖先安装的插件，释放时必须反向执行
+    const pluginCleanups = [...this.#plugins.values()].reverse();
+    const moduleCleanups = [...this.#moduleCleanups].reverse();
     this.#plugins.clear();
+    this.#moduleCleanups.length = 0;
 
     const errors: unknown[] = [];
 
-    for (const cleanup of cleanups) {
+    for (const cleanup of [...pluginCleanups, ...moduleCleanups]) {
       if (!cleanup) {
         continue;
       }
@@ -82,7 +97,7 @@ export class CesiumPlus {
     }
 
     if (errors.length > 0) {
-      throw new AggregateError(errors, '一个或多个 CesiumPlus 插件释放失败。');
+      throw new AggregateError(errors, '一个或多个 CesiumPlus 资源释放失败。');
     }
   }
 
@@ -104,7 +119,7 @@ export function definePlugin(plugin: CesiumPlusPlugin): CesiumPlusPlugin {
   return plugin;
 }
 
-// 运行时也要校验插件形状；TypeScript 类型挡不住普通 JavaScript 用户。
+// 运行时也要校验插件形状；TypeScript 类型挡不住普通 JavaScript 用户
 function validatePlugin(plugin: CesiumPlusPlugin): void {
   const candidate = plugin as Partial<CesiumPlusPlugin> | null | undefined;
 
@@ -124,8 +139,14 @@ function validatePlugin(plugin: CesiumPlusPlugin): void {
   }
 }
 
-// 内置插件
-export { coordinateReadout } from './plugins/coordinate-readout.js';
-export type { CoordinateReadoutOptions } from './plugins/coordinate-readout.js';
-export { screenshot } from './plugins/screenshot.js';
-export type { ScreenshotPlugin } from './plugins/screenshot.js';
+// 内置模块
+export type {
+  CesiumPlusCapture,
+  DownloadScreenshotOptions,
+  ScreenshotOptions,
+} from './modules/capture.js';
+export type {
+  CesiumPlusCoordinates,
+  CoordinatePosition,
+  CoordinateWatchOptions,
+} from './modules/coordinates.js';
