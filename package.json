@@ -1,7 +1,7 @@
 {
   "name": "cesium-plus",
   "version": "0.1.0",
-  "description": "面向 CesiumJS 的框架无关增强工具。",
+  "description": "Framework-agnostic enhancement toolkit for CesiumJS | 面向 CesiumJS 的框架无关增强工具",
   "type": "module",
   "license": "MIT",
   "author": "xiaohuibuhuifei",
@@ -28,15 +28,22 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "main": "./dist/index.js",
-  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "clean": "node scripts/clean.mjs",
     "copy:cesium": "node scripts/copy-cesium-assets.mjs",
@@ -51,7 +58,9 @@
     "typecheck": "vue-tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "pack:check": "npm pack --dry-run",
-    "prepublishOnly": "npm run lint && npm run typecheck && npm run test && npm run build && npm run pack:check"
+    "release:check": "npm run lint && npm run typecheck && npm run test && npm run build && npm run pack:check",
+    "release:dry-run": "npm publish --dry-run --access public",
+    "prepublishOnly": "npm run release:check"
   },
   "peerDependencies": {
     "cesium": ">=1.70.0 <2"

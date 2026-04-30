@@ -1,18 +1,18 @@
 # Cesium Plus
 
-面向 CesiumJS 的框架无关增强工具。
+Framework-agnostic enhancement toolkit for CesiumJS.
 
-Cesium Plus 不修改 Cesium，不替换 `Viewer`，也不注册全局副作用。应用负责创建和配置 Cesium；这个包只提供显式安装、可释放的增强能力。
+Cesium Plus does not modify Cesium, replace `Viewer`, or register global side effects. The application is responsible for creating and configuring Cesium; this package only provides explicitly installed, disposable enhancements through a plugin system.
 
-## 安装
+## Install
 
 ```sh
 npm install cesium-plus cesium
 ```
 
-`cesium-plus` 将 Cesium 作为对等依赖处理，兼容范围为 `cesium >=1.70.0 <2`。开发和示例构建会使用仓库里的当前 Cesium 开发依赖版本验证。
+`cesium` is a peer dependency. Compatible with `cesium >=1.70.0 <2`.
 
-## 使用
+## Quick Start
 
 ```ts
 import { Viewer } from 'cesium';
@@ -25,7 +25,7 @@ const plus = CesiumPlus.create(viewer).use(
     name: 'example',
     install: ({ viewer }) => {
       const listener = () => {
-        // 只使用 Cesium 公开 API。
+        // Use only Cesium public APIs.
       };
 
       viewer.clock.onTick.addEventListener(listener);
@@ -37,29 +37,25 @@ const plus = CesiumPlus.create(viewer).use(
 plus.dispose();
 ```
 
-`CesiumPlus.create(viewer)` 只创建增强管理器，不创建、不销毁、不替换 Cesium `Viewer`。如果你已经在使用旧写法，`createCesiumPlus(viewer)` 会继续保留。
+`CesiumPlus.create(viewer)` only creates the enhancement manager. It does not create, destroy, or replace the Cesium `Viewer`. `createCesiumPlus(viewer)` is also available as an alias.
 
-详细 API 见 [docs/api.md](./docs/api.md)。
+See [docs/api.md](./docs/api.md) for the full API reference.
 
-## Cesium 静态资源
+## Framework Integration
 
-CesiumJS 运行时需要由宿主应用托管静态资源。这个配置应该留在应用侧，不要藏进增强库里。
+Vue, React, and other frameworks should create the Cesium `Viewer` in their own lifecycle, pass it to `CesiumPlus.create(viewer)`, and call `dispose()` on unmount.
 
-运行内置 Vue 3 + Vite 示例：
+## Cesium Static Assets
+
+CesiumJS requires the host application to serve static assets at runtime. This configuration stays on the application side and is not handled by this package.
+
+Run the built-in Vue 3 + Vite example:
 
 ```sh
 npm run dev:example
 ```
 
-示例开发服务默认启动在 `http://localhost:9527/`。
-
-脚本会把 Cesium 的 `Workers`、`ThirdParty`、`Assets`、`Widgets` 目录复制到 `examples/vue3/public/cesium`，并把 `CESIUM_BASE_URL` 设置为 `/cesium/`。
-
-## 框架接入
-
-Vue、React 等框架应在自己的生命周期里创建 Cesium `Viewer`，把它传给 `CesiumPlus.create(viewer)`，并在卸载时调用 `dispose()`。
-
-## 脚本
+## Scripts
 
 ```sh
 npm run lint
@@ -68,4 +64,24 @@ npm run test
 npm run build
 npm run build:example
 npm run pack:check
+npm run release:check
+npm run release:dry-run
 ```
+
+Release workflow: [docs/release.md](./docs/release.md).
+
+---
+
+## 中文说明
+
+面向 CesiumJS 的框架无关增强工具。
+
+Cesium Plus 不修改 Cesium，不替换 `Viewer`，也不注册全局副作用。应用负责创建和配置 Cesium；这个包只提供显式安装、可释放的增强能力。
+
+`CesiumPlus.create(viewer)` 只创建增强管理器，不创建、不销毁、不替换 Cesium `Viewer`。`createCesiumPlus(viewer)` 会继续保留为别名。
+
+CesiumJS 运行时需要由宿主应用托管静态资源。这个配置应该留在应用侧，不要藏进增强库里。
+
+脚本会把 Cesium 的 `Workers`、`ThirdParty`、`Assets`、`Widgets` 目录复制到 `examples/vue3/public/cesium`，并把 `CESIUM_BASE_URL` 设置为 `/cesium/`。
+
+Vue、React 等框架应在自己的生命周期里创建 Cesium `Viewer`，把它传给 `CesiumPlus.create(viewer)`，并在卸载时调用 `dispose()`。

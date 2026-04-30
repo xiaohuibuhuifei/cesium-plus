@@ -1,11 +1,16 @@
 import type { Viewer } from 'cesium';
 import { describe, expect, it, vi } from 'vitest';
 
-import { create, createCesiumPlus, definePlugin } from '../src/index';
+import { CesiumPlus, create, createCesiumPlus, definePlugin } from '../src/index';
 
 const viewer = {} as Viewer;
 
 describe('CesiumPlus', () => {
+  it('拒绝 null / undefined viewer', () => {
+    expect(() => new CesiumPlus(null as never)).toThrow(TypeError);
+    expect(() => new CesiumPlus(undefined as never)).toThrow(TypeError);
+  });
+
   it('保留调用方创建的 Viewer', () => {
     const plus = createCesiumPlus(viewer);
 
