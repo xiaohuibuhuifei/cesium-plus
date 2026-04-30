@@ -53,7 +53,9 @@ describe('coordinateReadout', () => {
     const plugin = coordinateReadout({ onMove: vi.fn() });
     const cleanup = plugin.install({ viewer, plus: {} as never });
     handlerInstance.destroy.mockClear();
-    cleanup!();
+    if (cleanup) {
+      cleanup();
+    }
     expect(handlerInstance.destroy).toHaveBeenCalled();
   });
 
