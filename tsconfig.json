@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "paths": {
+      "cesium-plus": ["./src/index.ts"]
+    },
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node", "vitest/globals"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "examples/**/*.ts",
+    "examples/**/*.vue",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "eslint.config.js"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "examples/vue3/dist",
+    "examples/vue3/public/cesium"
+  ]
+}

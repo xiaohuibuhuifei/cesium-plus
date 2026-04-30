@@ -1,0 +1,74 @@
+{
+  "name": "cesium-plus",
+  "version": "0.1.0",
+  "description": "面向 CesiumJS 的框架无关增强工具。",
+  "type": "module",
+  "license": "MIT",
+  "author": "xiaohuibuhuifei",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xiaohuibuhuifei/cesium-plus.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xiaohuibuhuifei/cesium-plus/issues"
+  },
+  "homepage": "https://github.com/xiaohuibuhuifei/cesium-plus#readme",
+  "keywords": [
+    "cesium",
+    "cesiumjs",
+    "gis",
+    "3d",
+    "map",
+    "viewer"
+  ],
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "copy:cesium": "node scripts/copy-cesium-assets.mjs",
+    "build:types": "tsc -p tsconfig.build.json --emitDeclarationOnly",
+    "build:js": "vite build",
+    "build": "npm run clean && npm run build:types && npm run build:js",
+    "build:example": "npm run build && npm run copy:cesium && vite build --config examples/vue3/vite.config.ts",
+    "dev:example": "npm run copy:cesium && vite --config examples/vue3/vite.config.ts",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "vue-tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "pack:check": "npm pack --dry-run",
+    "prepublishOnly": "npm run lint && npm run typecheck && npm run test && npm run build && npm run pack:check"
+  },
+  "peerDependencies": {
+    "cesium": ">=1.70.0 <2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.6.0",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "cesium": "^1.140.0",
+    "eslint": "^10.2.1",
+    "globals": "^17.5.0",
+    "prettier": "^3.8.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.1",
+    "vite": "^8.0.10",
+    "vitest": "^4.1.5",
+    "vue": "^3.5.33",
+    "vue-tsc": "^3.2.7"
+  }
+}
