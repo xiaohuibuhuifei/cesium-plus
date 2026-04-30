@@ -123,3 +123,9 @@ function validatePlugin(plugin: CesiumPlusPlugin): void {
     throw new TypeError('CesiumPlus 插件需要 install 函数。');
   }
 }
+
+// 内置插件
+export { coordinateReadout } from './plugins/coordinate-readout.js';
+export type { CoordinateReadoutOptions } from './plugins/coordinate-readout.js';
+export { screenshot } from './plugins/screenshot.js';
+export type { ScreenshotPlugin } from './plugins/screenshot.js';

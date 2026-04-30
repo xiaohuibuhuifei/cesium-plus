@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `coordinateReadout` plugin: mouse-move coordinate readout (longitude, latitude, height).
+- `screenshot` plugin: on-demand canvas screenshot via `takeScreenshot()`.
+
 ## 0.1.0 - TBD
 
 ### Added

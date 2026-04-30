@@ -1,4 +1,5 @@
 .ace-tool/
+.claude/
 node_modules/
 dist/
 coverage/

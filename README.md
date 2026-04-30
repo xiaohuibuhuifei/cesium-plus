@@ -16,23 +16,22 @@ npm install cesium-plus cesium
 
 ```ts
 import { Viewer } from 'cesium';
-import * as CesiumPlus from 'cesium-plus';
+import { create, coordinateReadout, screenshot } from 'cesium-plus';
 
 const viewer = new Viewer('cesiumContainer');
 
-const plus = CesiumPlus.create(viewer).use(
-  CesiumPlus.definePlugin({
-    name: 'example',
-    install: ({ viewer }) => {
-      const listener = () => {
-        // Use only Cesium public APIs.
-      };
+const plus = create(viewer)
+  .use(
+    coordinateReadout({
+      onMove({ longitude, latitude, height }) {
+        console.log(`${longitude.toFixed(6)}, ${latitude.toFixed(6)}, ${height.toFixed(1)}m`);
+      },
+    }),
+  )
+  .use(screenshot());
 
-      viewer.clock.onTick.addEventListener(listener);
-      return () => viewer.clock.onTick.removeEventListener(listener);
-    },
-  }),
-);
+// Take a screenshot at any time:
+// plus.pluginInstances[1].takeScreenshot()
 
 plus.dispose();
 ```
