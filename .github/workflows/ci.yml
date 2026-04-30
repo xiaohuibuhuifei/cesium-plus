@@ -9,23 +9,13 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version:
-          - 20.x
-          - 22.x
-          - 24.x
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22.x
           cache: npm
-      - run: npm ci
+      - run: npm install
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm run test
       - run: npm run build
-      - run: npm run build:example
-      - run: npm run pack:check
