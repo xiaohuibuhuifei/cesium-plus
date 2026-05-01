@@ -65,15 +65,22 @@ describe('capture', () => {
     const plus = createCesiumPlus(handle.viewer);
     plus.dispose();
 
-    await expect(plus.capture.screenshot()).rejects.toThrow(
-      'CesiumPlus 已经释放。',
-    );
+    await expect(plus.capture.screenshot()).rejects.toThrow('CesiumPlus 已经释放。');
+  });
+
+  it('释放时移除等待中的 postRender 监听并拒绝截图', async () => {
+    const handle = mockViewer();
+    const plus = createCesiumPlus(handle.viewer);
+
+    const screenshot = plus.capture.screenshot();
+    plus.dispose();
+
+    await expect(screenshot).rejects.toThrow('CesiumPlus 已经释放。');
+    expect(handle.listenerRemovers[0]).toHaveBeenCalledTimes(1);
   });
 });
 
-function mockViewer(
-  dataUrl = 'data:image/png;base64,abc123',
-): MockViewerHandle {
+function mockViewer(dataUrl = 'data:image/png;base64,abc123'): MockViewerHandle {
   const postRenderListeners: Array<() => void> = [];
   const listenerRemovers: ReturnType<typeof vi.fn>[] = [];
   const requestRender = vi.fn();

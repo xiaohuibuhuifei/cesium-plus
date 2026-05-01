@@ -89,6 +89,13 @@ describe('CesiumPlus', () => {
 
     expect(() =>
       definePlugin({
+        name: ' bad ',
+        install: () => undefined,
+      }),
+    ).toThrow('首尾空白');
+
+    expect(() =>
+      definePlugin({
         name: 'bad',
         install: 'nope',
       } as never),

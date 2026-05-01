@@ -7,23 +7,44 @@ import {
 } from 'cesium';
 
 type Cleanup = () => void;
+const unsupportedCoordinatesMessage = 'coordinates.watch 需要 Cesium Scene 支持 pickPosition。';
+
+interface CoordinatePickingScene {
+  readonly pickPosition?: unknown;
+  readonly pickPositionSupported?: boolean;
+}
 
 export interface CoordinatePosition {
+  /** 经度，单位为度。 */
   readonly longitude: number;
+  /** 纬度，单位为度。 */
   readonly latitude: number;
+  /** 高度，单位与 Cesium `Cartographic.height` 保持一致。 */
   readonly height: number;
 }
 
 export interface CoordinateWatchOptions {
+  /** 鼠标移动并成功取到场景位置时触发。 */
   readonly onMove: (coord: CoordinatePosition) => void;
 }
 
+/**
+ * Cesium Plus 内置坐标监听能力。
+ *
+ * 使用 Cesium `pickPosition` 从鼠标位置读取场景坐标。
+ */
 export interface CesiumPlusCoordinates {
   /**
-   * watch
+   * 当前 Cesium Scene 是否支持基于 `pickPosition` 的坐标监听。
+   */
+  readonly isSupported: boolean;
+  /**
+   * 监听鼠标移动坐标，返回幂等清理函数。
    *
-   * @param options 坐标监听选项
-   * @returns 坐标监听清理函数
+   * 如果调用方没有手动清理，`CesiumPlus.dispose()` 会兜底释放监听器。
+   *
+   * @throws TypeError 当 options 或 `onMove` 无效时抛出。
+   * @throws Error 当 Cesium Plus 已释放或当前 Scene 不支持 `pickPosition` 时抛出。
    */
   watch(options: CoordinateWatchOptions): Cleanup;
 }
@@ -32,43 +53,34 @@ interface CoordinatesController extends CesiumPlusCoordinates {
   dispose(): void;
 }
 
-/**
- * createCoordinates
- *
- * @param viewer Cesium Viewer 实例
- * @param assertActive CesiumPlus 生命周期校验函数
- * @returns CesiumPlus 内置坐标能力
- */
-export function createCoordinates(
-  viewer: Viewer,
-  assertActive: () => void,
-): CoordinatesController {
+export function createCoordinates(viewer: Viewer, assertActive: () => void): CoordinatesController {
   return new CoordinatesModule(viewer, assertActive);
 }
 
 class CoordinatesModule implements CoordinatesController {
   readonly #cleanups = new Set<Cleanup>();
+  public readonly isSupported: boolean;
 
   public constructor(
     private readonly viewer: Viewer,
     private readonly assertActive: () => void,
-  ) {}
+  ) {
+    this.isSupported = isCoordinatePickingSupported(viewer);
+  }
 
-  /**
-   * watch
-   *
-   * @param options 坐标监听选项
-   * @returns 坐标监听清理函数
-   */
   public watch(options: CoordinateWatchOptions): Cleanup {
     this.assertActive();
+    validateWatchOptions(options);
+
+    if (!this.isSupported) {
+      throw new Error(unsupportedCoordinatesMessage);
+    }
 
     const handler = new ScreenSpaceEventHandler(this.viewer.scene.canvas);
     let active = true;
 
     handler.setInputAction(
-      (movement: { endPosition: Cartesian2 }) =>
-        this.handleMove(movement, options),
+      (movement: { endPosition: Cartesian2 }) => this.handleMove(movement, options),
       ScreenSpaceEventType.MOUSE_MOVE,
     );
 
@@ -106,13 +118,8 @@ class CoordinatesModule implements CoordinatesController {
     }
   }
 
-  private handleMove(
-    movement: { endPosition: Cartesian2 },
-    options: CoordinateWatchOptions,
-  ): void {
-    const position: Cartesian3 | undefined = this.viewer.scene.pickPosition(
-      movement.endPosition,
-    );
+  private handleMove(movement: { endPosition: Cartesian2 }, options: CoordinateWatchOptions): void {
+    const position: Cartesian3 | undefined = this.viewer.scene.pickPosition(movement.endPosition);
 
     if (!position) {
       return;
@@ -130,4 +137,34 @@ class CoordinatesModule implements CoordinatesController {
       height: cartographic.height,
     });
   }
+}
+
+function validateWatchOptions(options: CoordinateWatchOptions): void {
+  const candidate = options as Partial<CoordinateWatchOptions> | null | undefined;
+
+  if (!candidate || typeof candidate !== 'object') {
+    throw new TypeError('coordinates.watch 需要 options 对象。');
+  }
+
+  if (typeof candidate.onMove !== 'function') {
+    throw new TypeError('coordinates.watch 需要 onMove 函数。');
+  }
+}
+
+function isCoordinatePickingSupported(viewer: Viewer): boolean {
+  const scene = getCoordinatePickingScene(viewer);
+
+  return Boolean(
+    scene && scene.pickPositionSupported !== false && typeof scene.pickPosition === 'function',
+  );
+}
+
+function getCoordinatePickingScene(viewer: Viewer): CoordinatePickingScene | undefined {
+  const scene = (viewer as { readonly scene?: unknown }).scene;
+
+  if (!scene || typeof scene !== 'object') {
+    return undefined;
+  }
+
+  return scene as CoordinatePickingScene;
 }

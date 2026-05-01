@@ -9,6 +9,17 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 - `CesiumPlus.capture`: on-demand canvas screenshot and download helpers.
 - `CesiumPlus.coordinates`: mouse-move coordinate watch helpers.
+- `CesiumPlus.coordinates.isSupported`: runtime support flag for `pickPosition`.
+
+### Fixed
+
+- Pending screenshots now remove their `postRender` listener and reject when `CesiumPlus.dispose()` runs.
+
+### Changed
+
+- `coordinates.watch()` now validates runtime options for plain JavaScript callers.
+- `coordinates.watch()` now reports unsupported `pickPosition` scenes with a clear error.
+- Plugin names now reject leading or trailing whitespace.
 
 ## 0.1.0 - TBD
 

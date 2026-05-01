@@ -1,6 +1,6 @@
 # 发布流程
 
-这个包只发布构建产物和文档，不发布源码、测试、示例构建产物或 Cesium 静态资源。发布前不要绕过 `prepublishOnly`，坏包一旦发出去，同一个 `name@version` 就不能重发。
+这个包只发布构建产物和 `README.md`，不发布 `docs`、源码、测试、示例构建产物或 Cesium 静态资源。发布前不要绕过 `prepublishOnly`，坏包一旦发出去，同一个 `name@version` 就不能重发。
 
 ## 前置检查
 
@@ -56,12 +56,11 @@ npm run pack:check
 ```text
 LICENSE
 README.md
-docs/**
 dist/**
 package.json
 ```
 
-不要把 `src/`、`test/`、`examples/vue3/dist/`、`examples/vue3/public/cesium/` 或 `node_modules/` 发进包里。
+`package.json` 由 npm 必然包含，`LICENSE` 可能被 npm 自动包含。不要把 `docs/`、`src/`、`test/`、`examples/vue3/dist/`、`examples/vue3/public/cesium/`、`.agents/`、`AGENTS.md` 或 `node_modules/` 发进包里。
 
 ## 消费端烟测
 

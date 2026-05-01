@@ -51,23 +51,25 @@ await plus.capture.downloadScreenshot({ filename: 'map.png' });
 
 ### coordinates
 
-内置坐标能力，不需要通过插件安装。`watch()` 会监听鼠标移动并返回清理函数；如果调用方没有手动清理，`CesiumPlus.dispose()` 会兜底释放。
+内置坐标能力，不需要通过插件安装。`isSupported` 表示当前 Scene 是否支持基于 `pickPosition` 的坐标监听。`watch()` 会监听鼠标移动并返回清理函数；如果调用方没有手动清理，`CesiumPlus.dispose()` 会兜底释放。
 
 ```ts
-const stopWatching = plus.coordinates.watch({
-  onMove({ longitude, latitude, height }) {
-    console.log(longitude, latitude, height);
-  },
-});
+if (plus.coordinates.isSupported) {
+  const stopWatching = plus.coordinates.watch({
+    onMove({ longitude, latitude, height }) {
+      console.log(longitude, latitude, height);
+    },
+  });
 
-stopWatching();
+  stopWatching();
+}
 ```
 
 ### use
 
 安装插件并返回当前实例，方便链式调用。
 
-同名插件只会安装一次。插件必须是对象，必须有非空 `name`，并且 `install` 必须是函数。`install` 可以不返回值，也可以返回释放回调；返回其他值会抛出 `TypeError`。
+同名插件只会安装一次。插件必须是对象，必须有非空且不含首尾空白的 `name`，并且 `install` 必须是函数。`install` 可以不返回值，也可以返回释放回调；返回其他值会抛出 `TypeError`。
 
 实例释放后调用 `use` 会抛出错误。
 
@@ -76,6 +78,8 @@ stopWatching();
 释放所有已安装插件。释放回调按安装顺序反向执行。
 
 `dispose` 可以重复调用；第一次释放后再次调用不会做任何事。如果一个或多个释放回调抛错，所有释放回调仍会继续执行，最后抛出 `AggregateError`。
+
+释放时会同时清理内置模块资源。等待中的截图会移除 `postRender` 监听并拒绝 Promise；未手动清理的坐标监听会被兜底释放。
 
 ## definePlugin
 
@@ -105,12 +109,15 @@ interface DownloadScreenshotOptions extends ScreenshotOptions {
 
 `screenshot()` 默认返回 PNG data URL。`type` 和 `quality` 会直接传给 canvas `toDataURL`。`downloadScreenshot()` 复用同一次截图并触发浏览器下载，默认文件名是 `cesium-plus-screenshot.png`。
 
+实例释放后调用截图能力会抛出错误。如果截图正在等待下一次 `postRender`，`dispose()` 会移除监听并拒绝这个 Promise。
+
 如果宿主关闭默认渲染循环或浏览器仍返回黑图，可以在创建 `Viewer` 时把 WebGL `preserveDrawingBuffer` 作为兜底配置；正常路径不要求它。
 
 ## Coordinates
 
 ```ts
 interface CesiumPlusCoordinates {
+  readonly isSupported: boolean;
   watch(options: CoordinateWatchOptions): CesiumPlusCleanup;
 }
 
@@ -125,7 +132,9 @@ interface CoordinatePosition {
 }
 ```
 
-`coordinates.watch()` 从 Cesium `pickPosition` 读取鼠标所在位置，回调中的 `longitude` / `latitude` 为角度值，`height` 为 Cesium 返回的高度。
+`coordinates.isSupported` 为 `true` 时，`coordinates.watch()` 可以从 Cesium `pickPosition` 读取鼠标所在位置，回调中的 `longitude` / `latitude` 为角度值，`height` 为 Cesium 返回的高度。
+
+`watch()` 需要 options 对象和 `onMove` 函数。参数无效时会抛出 `TypeError`。实例释放后继续监听，或当前 Scene 不支持 `pickPosition` 时，会抛出错误。
 
 ## Types
 

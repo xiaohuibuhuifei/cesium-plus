@@ -32,8 +32,7 @@ onMounted(() => {
   window.addEventListener('beforeunload', handleBeforeUnload, {
     once: true,
   });
-  removeUnloadListener = () =>
-    window.removeEventListener('beforeunload', handleBeforeUnload);
+  removeUnloadListener = () => window.removeEventListener('beforeunload', handleBeforeUnload);
 });
 
 onBeforeUnmount(() => {
@@ -75,11 +74,7 @@ function mountCesium(): void {
 
   addTestTarget(viewer);
   viewer.camera.setView({
-    destination: Cartesian3.fromDegrees(
-      testTarget.longitude,
-      testTarget.latitude - 0.04,
-      6500,
-    ),
+    destination: Cartesian3.fromDegrees(testTarget.longitude, testTarget.latitude - 0.04, 6500),
     orientation: {
       heading: 0,
       pitch: -0.72,
@@ -88,13 +83,18 @@ function mountCesium(): void {
   });
 
   const plus = CesiumPlus.create(viewer).use(createSceneStatusPlugin());
-  plus.coordinates.watch({
-    onMove({ height, latitude, longitude }) {
-      coordinateText.value = `${longitude.toFixed(6)}, ${latitude.toFixed(
-        6,
-      )}, ${height.toFixed(1)} m`;
-    },
-  });
+
+  if (plus.coordinates.isSupported) {
+    plus.coordinates.watch({
+      onMove({ height, latitude, longitude }) {
+        coordinateText.value = `${longitude.toFixed(6)}, ${latitude.toFixed(
+          6,
+        )}, ${height.toFixed(1)} m`;
+      },
+    });
+  } else {
+    coordinateText.value = '当前 Scene 不支持 pickPosition';
+  }
 
   viewerRef.value = viewer;
   plusRef.value = plus;
@@ -102,9 +102,7 @@ function mountCesium(): void {
   viewerReady.value = true;
   disposedText.value = plus.disposed ? '已释放' : '运行中';
   pluginNamesText.value = plus.pluginNames.join(', ') || '无';
-  pickSupportText.value = viewer.scene.pickPositionSupported
-    ? '支持'
-    : '不支持';
+  pickSupportText.value = plus.coordinates.isSupported ? '支持' : '不支持';
   detailText.value = `测试目标：${testTarget.longitude.toFixed(
     4,
   )}, ${testTarget.latitude.toFixed(4)}`;
@@ -131,11 +129,7 @@ function addTestTarget(viewer: Viewer): void {
   viewer.entities.add({
     id: 'cesium-plus-test-target',
     name: 'Cesium Plus 测试目标',
-    position: Cartesian3.fromDegrees(
-      testTarget.longitude,
-      testTarget.latitude,
-      testTarget.height,
-    ),
+    position: Cartesian3.fromDegrees(testTarget.longitude, testTarget.latitude, testTarget.height),
     point: {
       color: Color.LIME,
       disableDepthTestDistance: Number.POSITIVE_INFINITY,
@@ -302,27 +296,13 @@ function getErrorMessage(error: unknown): string {
               <strong>{{ screenshotSizeText }}</strong>
             </div>
             <div class="actions">
-              <button
-                type="button"
-                :disabled="!canUseCesiumPlus"
-                @click="takeScreenshot"
-              >
+              <button type="button" :disabled="!canUseCesiumPlus" @click="takeScreenshot">
                 生成截图
               </button>
-              <button
-                type="button"
-                :disabled="!canUseCesiumPlus"
-                @click="downloadScreenshot"
-              >
+              <button type="button" :disabled="!canUseCesiumPlus" @click="downloadScreenshot">
                 下载截图
               </button>
-              <button
-                type="button"
-                :disabled="!viewerReady"
-                @click="releaseExample"
-              >
-                释放
-              </button>
+              <button type="button" :disabled="!viewerReady" @click="releaseExample">释放</button>
               <button type="button" @click="rebuildExample">重建</button>
             </div>
             <p v-if="errorText" class="error-text">{{ errorText }}</p>
@@ -330,10 +310,7 @@ function getErrorMessage(error: unknown): string {
 
           <section v-if="screenshotDataUrl" class="panel-section">
             <h2>截图预览</h2>
-            <img
-              :src="screenshotDataUrl"
-              alt="Cesium canvas screenshot preview"
-            />
+            <img :src="screenshotDataUrl" alt="Cesium canvas screenshot preview" />
           </section>
         </aside>
       </div>

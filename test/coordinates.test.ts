@@ -5,6 +5,11 @@ import { createCesiumPlus, definePlugin } from '../src/index';
 
 type MoveCallback = (movement: { endPosition: unknown }) => void;
 
+interface MockViewerOptions {
+  readonly hasPickPosition?: boolean;
+  readonly pickPositionSupported?: boolean;
+}
+
 interface MockHandler {
   callback: MoveCallback | undefined;
   destroyed: boolean;
@@ -31,12 +36,10 @@ const cesiumMock = vi.hoisted(() => {
       handler.destroyed = true;
     });
     handler.isDestroyed.mockImplementation(() => handler.destroyed);
-    handler.setInputAction.mockImplementation(
-      (callback: MoveCallback, type: unknown) => {
-        handler.callback = callback;
-        handler.type = type;
-      },
-    );
+    handler.setInputAction.mockImplementation((callback: MoveCallback, type: unknown) => {
+      handler.callback = callback;
+      handler.type = type;
+    });
     handlers.push(handler);
     return handler;
   });
@@ -73,6 +76,24 @@ beforeEach(() => {
 });
 
 describe('coordinates', () => {
+  it('暴露 pickPosition 支持状态', () => {
+    expect(createCesiumPlus(mockViewer()).coordinates.isSupported).toBe(true);
+    expect(
+      createCesiumPlus(
+        mockViewer(undefined, {
+          pickPositionSupported: false,
+        }),
+      ).coordinates.isSupported,
+    ).toBe(false);
+    expect(
+      createCesiumPlus(
+        mockViewer(undefined, {
+          hasPickPosition: false,
+        }),
+      ).coordinates.isSupported,
+    ).toBe(false);
+  });
+
   it('注册鼠标移动坐标监听', () => {
     const viewer = mockViewer();
     const plus = createCesiumPlus(viewer);
@@ -80,13 +101,8 @@ describe('coordinates', () => {
     const cleanup = plus.coordinates.watch({ onMove: vi.fn() });
     const handler = firstHandler();
 
-    expect(cesiumMock.ScreenSpaceEventHandler).toHaveBeenCalledWith(
-      viewer.scene.canvas,
-    );
-    expect(handler.setInputAction).toHaveBeenCalledWith(
-      expect.any(Function),
-      'MOUSE_MOVE',
-    );
+    expect(cesiumMock.ScreenSpaceEventHandler).toHaveBeenCalledWith(viewer.scene.canvas);
+    expect(handler.setInputAction).toHaveBeenCalledWith(expect.any(Function), 'MOUSE_MOVE');
     expect(typeof cleanup).toBe('function');
   });
 
@@ -119,6 +135,29 @@ describe('coordinates', () => {
 
     expect(onMove).not.toHaveBeenCalled();
     expect(cesiumMock.fromCartesian).not.toHaveBeenCalled();
+  });
+
+  it('Cartographic 转换没有结果时不触发 onMove', () => {
+    cesiumMock.fromCartesian.mockReturnValueOnce(undefined);
+    const viewer = mockViewer({ x: 1, y: 2, z: 3 });
+    const onMove = vi.fn();
+    const plus = createCesiumPlus(viewer);
+
+    plus.coordinates.watch({ onMove });
+    triggerMove({} as Cartesian2);
+
+    expect(onMove).not.toHaveBeenCalled();
+  });
+
+  it('Scene 不支持 pickPosition 时拒绝监听坐标', () => {
+    const plus = createCesiumPlus(
+      mockViewer(undefined, {
+        pickPositionSupported: false,
+      }),
+    );
+
+    expect(() => plus.coordinates.watch({ onMove: vi.fn() })).toThrow('pickPosition');
+    expect(cesiumMock.ScreenSpaceEventHandler).not.toHaveBeenCalled();
   });
 
   it('cleanup 幂等释放监听', () => {
@@ -165,18 +204,40 @@ describe('coordinates', () => {
     const plus = createCesiumPlus(mockViewer());
     plus.dispose();
 
-    expect(() => plus.coordinates.watch({ onMove: vi.fn() })).toThrow(
-      'CesiumPlus 已经释放。',
-    );
+    expect(() => plus.coordinates.watch({ onMove: vi.fn() })).toThrow('CesiumPlus 已经释放。');
+  });
+
+  it('运行时校验监听选项', () => {
+    const plus = createCesiumPlus(mockViewer());
+
+    expect(() => plus.coordinates.watch(null as never)).toThrow('options 对象');
+    expect(() =>
+      plus.coordinates.watch({
+        onMove: 'bad',
+      } as never),
+    ).toThrow('onMove 函数');
   });
 });
 
-function mockViewer(position?: unknown): Viewer {
+function mockViewer(position?: unknown, options: MockViewerOptions = {}): Viewer {
+  const scene: {
+    canvas: object;
+    pickPosition?: ReturnType<typeof vi.fn>;
+    pickPositionSupported?: boolean;
+  } = {
+    canvas: {},
+  };
+
+  if (options.hasPickPosition !== false) {
+    scene.pickPosition = vi.fn(() => position);
+  }
+
+  if (options.pickPositionSupported !== undefined) {
+    scene.pickPositionSupported = options.pickPositionSupported;
+  }
+
   return {
-    scene: {
-      canvas: {},
-      pickPosition: vi.fn(() => position),
-    },
+    scene,
   } as unknown as Viewer;
 }
 

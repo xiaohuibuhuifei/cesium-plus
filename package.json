@@ -24,9 +24,7 @@
   "sideEffects": false,
   "files": [
     "dist",
-    "docs",
-    "README.md",
-    "LICENSE"
+    "README.md"
   ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
@@ -58,9 +56,9 @@
     "typecheck": "npx vue-tsc -p tsconfig.json --noEmit",
     "test": "npx vitest run",
     "test:example": "npm run build:example",
-    "test:full": "npm run lint && npm run typecheck && npm run test && npm run build:example && npm run pack:check",
+    "test:full": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build:example && npm run pack:check",
     "pack:check": "npm pack --dry-run",
-    "release:check": "npm run lint && npm run typecheck && npm run test && npm run build && npm run pack:check",
+    "release:check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build && npm run pack:check",
     "release:dry-run": "npm publish --dry-run --access public",
     "prepublishOnly": "npm run release:check"
   },
