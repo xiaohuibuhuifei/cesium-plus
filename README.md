@@ -69,18 +69,17 @@ lifecycle, pass it to `create(viewer)`, and call `dispose()` on unmount.
 CesiumJS requires the host application to serve static assets at runtime. This
 configuration stays on the application side and is not handled by this package.
 
-Run the built-in Vue 3 + Vite example:
+Run the built-in Vue 3 + Vite examples site:
 
 ```sh
 npm run dev:example
 ```
 
-The example is a manual full-feature test bench for the public API, built-in
-modules, and plugins. Verify that the Cesium canvas renders, installed plugin
-names include `scene-status`, hovering the test target updates the coordinate
-readout when `coordinates.canWatchMouse` is true, capture creates a PNG
-preview/download, and release/rebuild moves the viewer through a clean
-lifecycle.
+The examples app is organized as independently routed demos for each public
+capability. The home page is an entry gallery with quick filters, and each
+detail page uses a fixed layout with a large Cesium stage on the left and a
+narrow status/explanation sidebar on the right. Current routes cover quick
+start, mouse coordinates, screenshot capture, and basic plugins.
 
 ## Scripts
 
