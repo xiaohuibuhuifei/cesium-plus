@@ -1,8 +1,29 @@
 import type { Viewer } from 'cesium';
 
-const defaultScreenshotType = 'image/png';
-const defaultScreenshotFilename = 'cesium-plus-screenshot.png';
+const defaultScreenshotFormat = 'png';
 const disposedErrorMessage = 'CesiumPlus 已经释放。';
+
+export type ScreenshotFormat = 'png' | 'jpeg' | 'webp';
+
+interface ScreenshotFormatDefinition {
+  readonly extension: string;
+  readonly mimeType: string;
+}
+
+const screenshotFormats: Record<ScreenshotFormat, ScreenshotFormatDefinition> = {
+  jpeg: {
+    extension: 'jpeg',
+    mimeType: 'image/jpeg',
+  },
+  png: {
+    extension: 'png',
+    mimeType: 'image/png',
+  },
+  webp: {
+    extension: 'webp',
+    mimeType: 'image/webp',
+  },
+} as const;
 
 type RemoveListener = () => void;
 
@@ -12,14 +33,14 @@ interface PendingRenderWait {
 }
 
 export interface ScreenshotOptions {
-  /** 输出图片类型，默认使用 PNG */
-  readonly type?: string;
-  /** 图片质量，语义与 canvas.toDataURL 的第二个参数一致 */
+  /** 输出图片格式，默认使用 png。 */
+  readonly format?: ScreenshotFormat;
+  /** 图片质量，取值范围为 0 到 1。 */
   readonly quality?: number;
 }
 
 export interface DownloadScreenshotOptions extends ScreenshotOptions {
-  /** 下载文件名，默认使用 cesium-plus-screenshot.png */
+  /** 下载文件名，默认随图片格式生成。 */
   readonly filename?: string;
 }
 
@@ -32,16 +53,18 @@ export interface CesiumPlusCapture {
   /**
    * 请求下一帧渲染后读取 canvas，返回截图 data URL。
    *
-   * `type` 默认是 `image/png`。实例释放后调用会抛出错误。
+   * `format` 默认是 `png`。实例释放后调用会抛出错误。
    *
+   * @throws TypeError 当 options、format 或 quality 无效时拒绝。
    * @throws Error 当 Cesium Plus 已释放或 Cesium 请求渲染失败时拒绝。
    */
   screenshot(options?: ScreenshotOptions): Promise<string>;
   /**
    * 复用截图流程并触发浏览器下载，返回同一个 data URL。
    *
-   * 需要浏览器 `document`；默认文件名是 `cesium-plus-screenshot.png`。
+   * 需要浏览器 `document`；默认文件名随图片格式生成。
    *
+   * @throws TypeError 当 options、format、quality 或 filename 无效时拒绝。
    * @throws Error 当 Cesium Plus 已释放、缺少浏览器 `document` 或截图失败时拒绝。
    */
   downloadScreenshot(options?: DownloadScreenshotOptions): Promise<string>;
@@ -65,6 +88,7 @@ class CaptureController implements CaptureControllerApi {
 
   public async screenshot(options: ScreenshotOptions = {}): Promise<string> {
     this.assertActive();
+    validateScreenshotOptions(options);
     await this.waitForNextRender();
     this.assertActive();
     return readCanvasDataUrl(this.viewer, options);
@@ -72,6 +96,7 @@ class CaptureController implements CaptureControllerApi {
 
   public async downloadScreenshot(options: DownloadScreenshotOptions = {}): Promise<string> {
     this.assertActive();
+    validateDownloadScreenshotOptions(options);
 
     if (typeof document === 'undefined') {
       throw new Error('downloadScreenshot 需要浏览器 document。');
@@ -80,7 +105,7 @@ class CaptureController implements CaptureControllerApi {
     const dataUrl = await this.screenshot(options);
     const link = document.createElement('a');
     link.href = dataUrl;
-    link.download = options.filename ?? defaultScreenshotFilename;
+    link.download = options.filename ?? getDefaultScreenshotFilename(options);
     document.body.append(link);
     link.click();
     link.remove();
@@ -147,11 +172,55 @@ class CaptureController implements CaptureControllerApi {
 
 function readCanvasDataUrl(viewer: Viewer, options: ScreenshotOptions): string {
   const canvas = viewer.scene.canvas as HTMLCanvasElement;
-  const type = options.type ?? defaultScreenshotType;
+  const mimeType = getScreenshotFormat(options).mimeType;
 
   if (options.quality === undefined) {
-    return canvas.toDataURL(type);
+    return canvas.toDataURL(mimeType);
   }
 
-  return canvas.toDataURL(type, options.quality);
+  return canvas.toDataURL(mimeType, options.quality);
+}
+
+function getDefaultScreenshotFilename(options: ScreenshotOptions): string {
+  return `cesium-plus-screenshot.${getScreenshotFormat(options).extension}`;
+}
+
+function getScreenshotFormat(options: ScreenshotOptions): ScreenshotFormatDefinition {
+  return screenshotFormats[options.format ?? defaultScreenshotFormat];
+}
+
+function validateDownloadScreenshotOptions(options: DownloadScreenshotOptions): void {
+  validateScreenshotOptions(options);
+
+  if (options.filename !== undefined) {
+    validateFilename(options.filename);
+  }
+}
+
+function validateScreenshotOptions(options: ScreenshotOptions): void {
+  const candidate = options as Partial<ScreenshotOptions> | null | undefined;
+
+  if (!candidate || typeof candidate !== 'object') {
+    throw new TypeError('capture.screenshot 需要 options 对象。');
+  }
+
+  if (candidate.format !== undefined && !Object.hasOwn(screenshotFormats, candidate.format)) {
+    throw new TypeError('capture.screenshot format 只能是 png、jpeg 或 webp。');
+  }
+
+  if (candidate.quality !== undefined) {
+    validateQuality(candidate.quality);
+  }
+}
+
+function validateQuality(quality: number): void {
+  if (typeof quality !== 'number' || !Number.isFinite(quality) || quality < 0 || quality > 1) {
+    throw new TypeError('capture.screenshot quality 必须是 0 到 1 之间的数字。');
+  }
+}
+
+function validateFilename(filename: string): void {
+  if (typeof filename !== 'string' || filename.trim().length === 0) {
+    throw new TypeError('capture.downloadScreenshot filename 必须是非空字符串。');
+  }
 }

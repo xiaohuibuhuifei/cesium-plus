@@ -1,7 +1,7 @@
 import type { Viewer } from 'cesium';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createCesiumPlus } from '../src/index';
+import { create } from '../src/index';
 
 interface MockViewerHandle {
   readonly listenerRemovers: ReturnType<typeof vi.fn>[];
@@ -18,7 +18,7 @@ afterEach(() => {
 describe('capture', () => {
   it('在下一次 postRender 后生成 PNG data URL', async () => {
     const handle = mockViewer('data:image/png;base64,abc123');
-    const plus = createCesiumPlus(handle.viewer);
+    const plus = create(handle.viewer);
 
     const screenshot = plus.capture.screenshot();
     emitNextPostRender(handle);
@@ -31,11 +31,11 @@ describe('capture', () => {
 
   it('把自定义格式和质量传给 canvas', async () => {
     const handle = mockViewer('data:image/jpeg;base64,abc123');
-    const plus = createCesiumPlus(handle.viewer);
+    const plus = create(handle.viewer);
 
     const screenshot = plus.capture.screenshot({
+      format: 'jpeg',
       quality: 0.8,
-      type: 'image/jpeg',
     });
     emitNextPostRender(handle);
 
@@ -44,25 +44,40 @@ describe('capture', () => {
   });
 
   it('下载截图并返回同一个 data URL', async () => {
-    const handle = mockViewer('data:image/png;base64,download');
+    const handle = mockViewer('data:image/jpeg;base64,download');
     const link = mockDocument();
-    const plus = createCesiumPlus(handle.viewer);
+    const plus = create(handle.viewer);
 
     const screenshot = plus.capture.downloadScreenshot({
-      filename: 'map.png',
+      filename: 'map.jpeg',
+      format: 'jpeg',
     });
     emitNextPostRender(handle);
 
-    await expect(screenshot).resolves.toBe('data:image/png;base64,download');
-    expect(link.href).toBe('data:image/png;base64,download');
-    expect(link.download).toBe('map.png');
+    await expect(screenshot).resolves.toBe('data:image/jpeg;base64,download');
+    expect(handle.toDataURL).toHaveBeenCalledWith('image/jpeg');
+    expect(link.href).toBe('data:image/jpeg;base64,download');
+    expect(link.download).toBe('map.jpeg');
     expect(link.click).toHaveBeenCalledTimes(1);
     expect(link.remove).toHaveBeenCalledTimes(1);
   });
 
+  it('下载截图时默认文件名跟随格式', async () => {
+    const handle = mockViewer('data:image/webp;base64,download');
+    const link = mockDocument();
+    const plus = create(handle.viewer);
+
+    const screenshot = plus.capture.downloadScreenshot({ format: 'webp' });
+    emitNextPostRender(handle);
+
+    await expect(screenshot).resolves.toBe('data:image/webp;base64,download');
+    expect(handle.toDataURL).toHaveBeenCalledWith('image/webp');
+    expect(link.download).toBe('cesium-plus-screenshot.webp');
+  });
+
   it('释放后拒绝截图', async () => {
     const handle = mockViewer();
-    const plus = createCesiumPlus(handle.viewer);
+    const plus = create(handle.viewer);
     plus.dispose();
 
     await expect(plus.capture.screenshot()).rejects.toThrow('CesiumPlus 已经释放。');
@@ -70,13 +85,35 @@ describe('capture', () => {
 
   it('释放时移除等待中的 postRender 监听并拒绝截图', async () => {
     const handle = mockViewer();
-    const plus = createCesiumPlus(handle.viewer);
+    const plus = create(handle.viewer);
 
     const screenshot = plus.capture.screenshot();
     plus.dispose();
 
     await expect(screenshot).rejects.toThrow('CesiumPlus 已经释放。');
     expect(handle.listenerRemovers[0]).toHaveBeenCalledTimes(1);
+  });
+
+  it('运行时校验截图选项', async () => {
+    const handle = mockViewer();
+    const plus = create(handle.viewer);
+
+    await expect(plus.capture.screenshot(null as never)).rejects.toThrow('options 对象');
+    await expect(
+      plus.capture.screenshot({
+        format: 'gif',
+      } as never),
+    ).rejects.toThrow('png、jpeg 或 webp');
+    await expect(
+      plus.capture.screenshot({
+        quality: 2,
+      }),
+    ).rejects.toThrow('0 到 1');
+    await expect(
+      plus.capture.downloadScreenshot({
+        filename: '',
+      }),
+    ).rejects.toThrow('filename');
   });
 });
 

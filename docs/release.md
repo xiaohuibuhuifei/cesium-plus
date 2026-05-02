@@ -1,6 +1,6 @@
 # 发布流程
 
-这个包只发布构建产物和 `README.md`，不发布 `docs`、源码、测试、示例构建产物或 Cesium 静态资源。发布前不要绕过 `prepublishOnly`，坏包一旦发出去，同一个 `name@version` 就不能重发。
+这个包只发布构建产物、`README.md` 和 `README.zh-CN.md`，不发布 `docs`、源码、测试、示例构建产物或 Cesium 静态资源。发布前不要绕过 `prepublishOnly`，坏包一旦发出去，同一个 `name@version` 就不能重发。
 
 ## 前置检查
 
@@ -56,11 +56,12 @@ npm run pack:check
 ```text
 LICENSE
 README.md
+README.zh-CN.md
 dist/**
 package.json
 ```
 
-`package.json` 由 npm 必然包含，`LICENSE` 可能被 npm 自动包含。不要把 `docs/`、`src/`、`test/`、`examples/vue3/dist/`、`examples/vue3/public/cesium/`、`.agents/`、`AGENTS.md` 或 `node_modules/` 发进包里。
+`README.md` 是 npm 默认英文入口，`README.zh-CN.md` 是中文镜像入口。`package.json` 由 npm 必然包含，`LICENSE` 可能被 npm 自动包含。不要把 `CHANGELOG*.md`、`docs/`、`src/`、`test/`、`examples/vue3/dist/`、`examples/vue3/public/cesium/`、`.agents/`、`AGENTS.md` 或 `node_modules/` 发进包里。
 
 ## 消费端烟测
 
@@ -81,7 +82,7 @@ node --input-type=module -e "import('cesium-plus').then((m)=>console.log(Object.
 预期导出至少包含：
 
 ```text
-CesiumPlus,create,createCesiumPlus,definePlugin
+CesiumPlus,create,definePlugin
 ```
 
 ## 真实发布

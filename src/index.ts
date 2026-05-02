@@ -171,16 +171,9 @@ export class CesiumPlus {
  * @returns Cesium Plus 增强管理器。
  * @throws TypeError 当 `viewer` 为空时抛出。
  */
-export function createCesiumPlus(viewer: Viewer): CesiumPlus {
+export function create(viewer: Viewer): CesiumPlus {
   return new CesiumPlus(viewer);
 }
-
-/**
- * `createCesiumPlus` 的短别名，适合常规包导入用法。
- *
- * @see createCesiumPlus
- */
-export const create = createCesiumPlus;
 
 /**
  * 校验并返回插件定义。
@@ -219,10 +212,11 @@ function validatePlugin(plugin: CesiumPlusPlugin): void {
 export type {
   CesiumPlusCapture,
   DownloadScreenshotOptions,
+  ScreenshotFormat,
   ScreenshotOptions,
 } from './modules/capture.js';
 export type {
   CesiumPlusCoordinates,
   CoordinatePosition,
-  CoordinateWatchOptions,
+  CoordinateWatchCallback,
 } from './modules/coordinates.js';

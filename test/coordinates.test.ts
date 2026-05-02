@@ -1,7 +1,7 @@
 import type { Cartesian2, Viewer } from 'cesium';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createCesiumPlus, definePlugin } from '../src/index';
+import { create, definePlugin } from '../src/index';
 
 type MoveCallback = (movement: { endPosition: unknown }) => void;
 
@@ -77,28 +77,28 @@ beforeEach(() => {
 
 describe('coordinates', () => {
   it('暴露 pickPosition 支持状态', () => {
-    expect(createCesiumPlus(mockViewer()).coordinates.isSupported).toBe(true);
+    expect(create(mockViewer()).coordinates.canWatchMouse).toBe(true);
     expect(
-      createCesiumPlus(
+      create(
         mockViewer(undefined, {
           pickPositionSupported: false,
         }),
-      ).coordinates.isSupported,
+      ).coordinates.canWatchMouse,
     ).toBe(false);
     expect(
-      createCesiumPlus(
+      create(
         mockViewer(undefined, {
           hasPickPosition: false,
         }),
-      ).coordinates.isSupported,
+      ).coordinates.canWatchMouse,
     ).toBe(false);
   });
 
   it('注册鼠标移动坐标监听', () => {
     const viewer = mockViewer();
-    const plus = createCesiumPlus(viewer);
+    const plus = create(viewer);
 
-    const cleanup = plus.coordinates.watch({ onMove: vi.fn() });
+    const cleanup = plus.coordinates.watchMouse(vi.fn());
     const handler = firstHandler();
 
     expect(cesiumMock.ScreenSpaceEventHandler).toHaveBeenCalledWith(viewer.scene.canvas);
@@ -110,9 +110,9 @@ describe('coordinates', () => {
     const endPosition = {} as Cartesian2;
     const viewer = mockViewer({ x: 1, y: 2, z: 3 });
     const onMove = vi.fn();
-    const plus = createCesiumPlus(viewer);
+    const plus = create(viewer);
 
-    plus.coordinates.watch({ onMove });
+    plus.coordinates.watchMouse(onMove);
     triggerMove(endPosition);
 
     expect(viewer.scene.pickPosition).toHaveBeenCalledWith(endPosition);
@@ -128,9 +128,9 @@ describe('coordinates', () => {
   it('pickPosition 没有结果时不触发 onMove', () => {
     const viewer = mockViewer(undefined);
     const onMove = vi.fn();
-    const plus = createCesiumPlus(viewer);
+    const plus = create(viewer);
 
-    plus.coordinates.watch({ onMove });
+    plus.coordinates.watchMouse(onMove);
     triggerMove({} as Cartesian2);
 
     expect(onMove).not.toHaveBeenCalled();
@@ -141,28 +141,28 @@ describe('coordinates', () => {
     cesiumMock.fromCartesian.mockReturnValueOnce(undefined);
     const viewer = mockViewer({ x: 1, y: 2, z: 3 });
     const onMove = vi.fn();
-    const plus = createCesiumPlus(viewer);
+    const plus = create(viewer);
 
-    plus.coordinates.watch({ onMove });
+    plus.coordinates.watchMouse(onMove);
     triggerMove({} as Cartesian2);
 
     expect(onMove).not.toHaveBeenCalled();
   });
 
   it('Scene 不支持 pickPosition 时拒绝监听坐标', () => {
-    const plus = createCesiumPlus(
+    const plus = create(
       mockViewer(undefined, {
         pickPositionSupported: false,
       }),
     );
 
-    expect(() => plus.coordinates.watch({ onMove: vi.fn() })).toThrow('pickPosition');
+    expect(() => plus.coordinates.watchMouse(vi.fn())).toThrow('pickPosition');
     expect(cesiumMock.ScreenSpaceEventHandler).not.toHaveBeenCalled();
   });
 
   it('cleanup 幂等释放监听', () => {
-    const plus = createCesiumPlus(mockViewer());
-    const cleanup = plus.coordinates.watch({ onMove: vi.fn() });
+    const plus = create(mockViewer());
+    const cleanup = plus.coordinates.watchMouse(vi.fn());
     const handler = firstHandler();
 
     cleanup();
@@ -173,9 +173,9 @@ describe('coordinates', () => {
 
   it('dispose 释放未手动清理的监听并保持插件先释放', () => {
     const calls: string[] = [];
-    const plus = createCesiumPlus(mockViewer());
+    const plus = create(mockViewer());
 
-    plus.coordinates.watch({ onMove: vi.fn() });
+    plus.coordinates.watchMouse(vi.fn());
     firstHandler().destroy.mockImplementationOnce(() => {
       firstHandler().destroyed = true;
       calls.push('coordinates');
@@ -193,29 +193,25 @@ describe('coordinates', () => {
   });
 
   it('坐标监听不进入插件列表', () => {
-    const plus = createCesiumPlus(mockViewer());
+    const plus = create(mockViewer());
 
-    plus.coordinates.watch({ onMove: vi.fn() });
+    plus.coordinates.watchMouse(vi.fn());
 
     expect(plus.pluginNames).toEqual([]);
   });
 
   it('释放后拒绝继续监听坐标', () => {
-    const plus = createCesiumPlus(mockViewer());
+    const plus = create(mockViewer());
     plus.dispose();
 
-    expect(() => plus.coordinates.watch({ onMove: vi.fn() })).toThrow('CesiumPlus 已经释放。');
+    expect(() => plus.coordinates.watchMouse(vi.fn())).toThrow('CesiumPlus 已经释放。');
   });
 
-  it('运行时校验监听选项', () => {
-    const plus = createCesiumPlus(mockViewer());
+  it('运行时校验监听 callback', () => {
+    const plus = create(mockViewer());
 
-    expect(() => plus.coordinates.watch(null as never)).toThrow('options 对象');
-    expect(() =>
-      plus.coordinates.watch({
-        onMove: 'bad',
-      } as never),
-    ).toThrow('onMove 函数');
+    expect(() => plus.coordinates.watchMouse(null as never)).toThrow('callback 函数');
+    expect(() => plus.coordinates.watchMouse('bad' as never)).toThrow('callback 函数');
   });
 });
 

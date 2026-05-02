@@ -84,13 +84,11 @@ function mountCesium(): void {
 
   const plus = CesiumPlus.create(viewer).use(createSceneStatusPlugin());
 
-  if (plus.coordinates.isSupported) {
-    plus.coordinates.watch({
-      onMove({ height, latitude, longitude }) {
-        coordinateText.value = `${longitude.toFixed(6)}, ${latitude.toFixed(
-          6,
-        )}, ${height.toFixed(1)} m`;
-      },
+  if (plus.coordinates.canWatchMouse) {
+    plus.coordinates.watchMouse(({ height, latitude, longitude }) => {
+      coordinateText.value = `${longitude.toFixed(6)}, ${latitude.toFixed(
+        6,
+      )}, ${height.toFixed(1)} m`;
     });
   } else {
     coordinateText.value = '当前 Scene 不支持 pickPosition';
@@ -102,7 +100,7 @@ function mountCesium(): void {
   viewerReady.value = true;
   disposedText.value = plus.disposed ? '已释放' : '运行中';
   pluginNamesText.value = plus.pluginNames.join(', ') || '无';
-  pickSupportText.value = plus.coordinates.isSupported ? '支持' : '不支持';
+  pickSupportText.value = plus.coordinates.canWatchMouse ? '支持' : '不支持';
   detailText.value = `测试目标：${testTarget.longitude.toFixed(
     4,
   )}, ${testTarget.latitude.toFixed(4)}`;
@@ -182,6 +180,7 @@ async function downloadScreenshot(): Promise<void> {
     screenshotSizeText.value = '下载中';
     const dataUrl = await plus.capture.downloadScreenshot({
       filename: 'cesium-plus-example.png',
+      format: 'png',
     });
     screenshotDataUrl.value = dataUrl;
     screenshotSizeText.value = `${dataUrl.length.toLocaleString()} 字符`;

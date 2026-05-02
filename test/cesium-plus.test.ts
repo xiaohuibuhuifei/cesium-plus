@@ -1,7 +1,7 @@
 import type { Viewer } from 'cesium';
 import { describe, expect, it, vi } from 'vitest';
 
-import { CesiumPlus, create, createCesiumPlus, definePlugin } from '../src/index';
+import { CesiumPlus, create, definePlugin } from '../src/index';
 
 const viewer = {} as Viewer;
 
@@ -12,22 +12,21 @@ describe('CesiumPlus', () => {
   });
 
   it('保留调用方创建的 Viewer', () => {
-    const plus = createCesiumPlus(viewer);
+    const plus = create(viewer);
 
     expect(plus.viewer).toBe(viewer);
     expect(plus.disposed).toBe(false);
   });
 
-  it('提供 create 作为命名空间用法的短别名', () => {
+  it('通过 create 创建增强管理器', () => {
     const plus = create(viewer);
 
-    expect(create).toBe(createCesiumPlus);
     expect(plus.viewer).toBe(viewer);
   });
 
   it('按插件名去重安装', () => {
     const install = vi.fn();
-    const plus = createCesiumPlus(viewer);
+    const plus = create(viewer);
     const plugin = definePlugin({
       name: 'sample',
       install,
@@ -41,7 +40,7 @@ describe('CesiumPlus', () => {
 
   it('按安装顺序反向执行释放回调', () => {
     const calls: string[] = [];
-    const plus = createCesiumPlus(viewer);
+    const plus = create(viewer);
 
     plus
       .use(
@@ -66,7 +65,7 @@ describe('CesiumPlus', () => {
   });
 
   it('释放后拒绝继续安装插件', () => {
-    const plus = createCesiumPlus(viewer);
+    const plus = create(viewer);
     plus.dispose();
 
     expect(() =>
@@ -104,7 +103,7 @@ describe('CesiumPlus', () => {
 
   it('释放失败时仍执行剩余释放回调', () => {
     const calls: string[] = [];
-    const plus = createCesiumPlus(viewer);
+    const plus = create(viewer);
 
     plus
       .use(

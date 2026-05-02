@@ -37,14 +37,24 @@ description: Enforce Cesium Plus project rules for open-source JavaScript/TypeSc
 
 ## API 与类型
 
-- 公开 API 以 `src/index.ts`、`README.md`、`docs/api.md` 和测试共同约束；新增或修改公开能力时必须同步这些面。
+- 公开 API 以 `src/index.ts`、`README.md`、`README.zh-CN.md`、`docs/api.md` 和测试共同约束；新增或修改公开能力时必须同步这些面。
 - 新导出必须从 `src/index.ts` 明确导出，并在构建后生成 `.d.ts`。
-- 不删除兼容别名，例如 `create` 和 `createCesiumPlus`。
+- 未经用户明确批准，不删除兼容入口；删除公开 API 时必须同步源码导出、类型、README、`docs/api.md`、CHANGELOG 和测试。
 - 函数超过两个语义参数时，优先使用 options object。不要把多个布尔参数堆进公开 API。
 - 公开返回值必须结构稳定。不要同一个 API 在不同分支返回完全不同的对象形状。
 - 公共类型不得暴露 `any`。不确定输入用 `unknown`，在运行时收窄。
 - 类型设计优先使用 `readonly`、窄接口和显式返回值。不要导出内部实现类，除非它本身就是稳定抽象。
 - 错误信息必须面向用户、可解释，并以中文为主；公共 API 错误应能定位到 Cesium Plus 或具体模块。不要抛 plain string。
+
+## 易用 API 设计
+
+- 先从用户任务命名，不从 Cesium 内部类命名；API 应描述“截图、下载截图、监听鼠标坐标”这类动作，而不是暴露 `ScreenSpaceEventHandler`、MIME、`Cartographic` 等底层细节。
+- 能用普通对象、字面量联合类型或 callback 表达，就不要强迫用户传 Cesium 类型；需要高级能力时保留 `viewer` 逃生口。
+- 能减少调用方 import、分支、坐标转换、资源清理和魔法字符串，才算比 Cesium 官方 API 更好用。
+- 能用 callback-first 的单一参数表达事件监听时，不要包一层 `{ onMove }`；多个语义参数或可选项超过一个时才使用 options object。
+- 命名清晰优先于短；`downloadScreenshot()` 这种自解释名称比含糊的 `download()` 更适合公开 API。
+- 公开 options 使用用户语言：例如截图格式用 `format: 'png' | 'jpeg' | 'webp'`，不要让普通用户写 `image/png` 这类底层 MIME。
+- 新增或修改公开 API 必须先写出 README 示例和 `docs/api.md` 契约，再让实现、测试、示例与文档保持一致。
 
 ## TypeScript 与实现
 
@@ -83,9 +93,10 @@ description: Enforce Cesium Plus project rules for open-source JavaScript/TypeSc
 - bugfix 必须补回归测试，证明旧 bug 不会回来。
 - 测试断言公开行为，不锁死无关实现细节；不要为了通过测试削弱断言。
 - Mock Cesium 时只模拟当前测试需要的最小接口。不要复制 Cesium 类型体系。
-- README 面向 npm 消费者，必须保留安装、快速开始、核心边界和脚本；不要把不会发布到 npm 包里的 docs 当成唯一入口。
+- `README.md` 面向全球 npm 消费者，必须保持英文，并保留安装、快速开始、核心边界和脚本。
+- `README.zh-CN.md` 是中文镜像；改公开 API、默认行为、生命周期、发布边界或脚本时，必须和英文 README 同步。
 - `docs/api.md` 用于仓库内 API 细节；不要假设它会随 npm 包发布。
-- CHANGELOG 只记录用户可见变化，不写内部重排流水账。
+- `CHANGELOG.md` 保持英文，`CHANGELOG.zh-CN.md` 保持中文镜像；只记录用户可见变化，不写内部重排流水账。
 - 示例必须只使用公开 API，保持最小但完整。不要把内部或实验 API 放进示例。
 
 ## 依赖与发布
@@ -94,8 +105,8 @@ description: Enforce Cesium Plus project rules for open-source JavaScript/TypeSc
 - 添加依赖前必须检查维护状态、bundle 影响、浏览器兼容、许可证风险和长期价值。
 - 构建、测试、类型、发布工具放 devDependencies；运行时依赖必须有明确理由。
 - `exports`、`main`、`types`、`dist/**` 必须互相一致。
-- npm 包只发布 `dist/**` 和 `README.md`；接受 npm 自动包含 `package.json` 和 `LICENSE`。
-- 不发布 `docs/**`、`src/**`、`test/**`、`examples/**`、`.agents/**`、`AGENTS.md`、`node_modules/**`、Cesium 静态资源或示例构建产物。
+- npm 包只发布 `dist/**`、`README.md` 和 `README.zh-CN.md`；接受 npm 自动包含 `package.json` 和 `LICENSE`。
+- 不发布 `CHANGELOG*.md`、`docs/**`、`src/**`、`test/**`、`examples/**`、`.agents/**`、`AGENTS.md`、`node_modules/**`、Cesium 静态资源或示例构建产物。
 - 改 `package.json.files`、`exports`、`types`、构建脚本、peer range 或发布流程后，必须跑 `npm run pack:check`。
 - 发布前不要绕过 `prepublishOnly`。坏版本发布后不能用同一个版本号重发。
 

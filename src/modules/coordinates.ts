@@ -7,7 +7,8 @@ import {
 } from 'cesium';
 
 type Cleanup = () => void;
-const unsupportedCoordinatesMessage = 'coordinates.watch 需要 Cesium Scene 支持 pickPosition。';
+const unsupportedCoordinatesMessage =
+  'coordinates.watchMouse 需要 Cesium Scene 支持 pickPosition。';
 
 interface CoordinatePickingScene {
   readonly pickPosition?: unknown;
@@ -23,10 +24,8 @@ export interface CoordinatePosition {
   readonly height: number;
 }
 
-export interface CoordinateWatchOptions {
-  /** 鼠标移动并成功取到场景位置时触发。 */
-  readonly onMove: (coord: CoordinatePosition) => void;
-}
+/** 鼠标移动并成功取到场景位置时触发。 */
+export type CoordinateWatchCallback = (coord: CoordinatePosition) => void;
 
 /**
  * Cesium Plus 内置坐标监听能力。
@@ -35,18 +34,18 @@ export interface CoordinateWatchOptions {
  */
 export interface CesiumPlusCoordinates {
   /**
-   * 当前 Cesium Scene 是否支持基于 `pickPosition` 的坐标监听。
+   * 当前 Cesium Scene 是否支持鼠标坐标监听。
    */
-  readonly isSupported: boolean;
+  readonly canWatchMouse: boolean;
   /**
    * 监听鼠标移动坐标，返回幂等清理函数。
    *
    * 如果调用方没有手动清理，`CesiumPlus.dispose()` 会兜底释放监听器。
    *
-   * @throws TypeError 当 options 或 `onMove` 无效时抛出。
+   * @throws TypeError 当 callback 无效时抛出。
    * @throws Error 当 Cesium Plus 已释放或当前 Scene 不支持 `pickPosition` 时抛出。
    */
-  watch(options: CoordinateWatchOptions): Cleanup;
+  watchMouse(callback: CoordinateWatchCallback): Cleanup;
 }
 
 interface CoordinatesController extends CesiumPlusCoordinates {
@@ -59,20 +58,20 @@ export function createCoordinates(viewer: Viewer, assertActive: () => void): Coo
 
 class CoordinatesModule implements CoordinatesController {
   readonly #cleanups = new Set<Cleanup>();
-  public readonly isSupported: boolean;
+  public readonly canWatchMouse: boolean;
 
   public constructor(
     private readonly viewer: Viewer,
     private readonly assertActive: () => void,
   ) {
-    this.isSupported = isCoordinatePickingSupported(viewer);
+    this.canWatchMouse = isCoordinatePickingSupported(viewer);
   }
 
-  public watch(options: CoordinateWatchOptions): Cleanup {
+  public watchMouse(callback: CoordinateWatchCallback): Cleanup {
     this.assertActive();
-    validateWatchOptions(options);
+    validateWatchCallback(callback);
 
-    if (!this.isSupported) {
+    if (!this.canWatchMouse) {
       throw new Error(unsupportedCoordinatesMessage);
     }
 
@@ -80,7 +79,7 @@ class CoordinatesModule implements CoordinatesController {
     let active = true;
 
     handler.setInputAction(
-      (movement: { endPosition: Cartesian2 }) => this.handleMove(movement, options),
+      (movement: { endPosition: Cartesian2 }) => this.handleMove(movement, callback),
       ScreenSpaceEventType.MOUSE_MOVE,
     );
 
@@ -118,7 +117,10 @@ class CoordinatesModule implements CoordinatesController {
     }
   }
 
-  private handleMove(movement: { endPosition: Cartesian2 }, options: CoordinateWatchOptions): void {
+  private handleMove(
+    movement: { endPosition: Cartesian2 },
+    callback: CoordinateWatchCallback,
+  ): void {
     const position: Cartesian3 | undefined = this.viewer.scene.pickPosition(movement.endPosition);
 
     if (!position) {
@@ -131,7 +133,7 @@ class CoordinatesModule implements CoordinatesController {
       return;
     }
 
-    options.onMove({
+    callback({
       longitude: CesiumMath.toDegrees(cartographic.longitude),
       latitude: CesiumMath.toDegrees(cartographic.latitude),
       height: cartographic.height,
@@ -139,15 +141,9 @@ class CoordinatesModule implements CoordinatesController {
   }
 }
 
-function validateWatchOptions(options: CoordinateWatchOptions): void {
-  const candidate = options as Partial<CoordinateWatchOptions> | null | undefined;
-
-  if (!candidate || typeof candidate !== 'object') {
-    throw new TypeError('coordinates.watch 需要 options 对象。');
-  }
-
-  if (typeof candidate.onMove !== 'function') {
-    throw new TypeError('coordinates.watch 需要 onMove 函数。');
+function validateWatchCallback(callback: CoordinateWatchCallback): void {
+  if (typeof callback !== 'function') {
+    throw new TypeError('coordinates.watchMouse 需要 callback 函数。');
   }
 }
 
