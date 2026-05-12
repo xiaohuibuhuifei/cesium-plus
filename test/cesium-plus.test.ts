@@ -16,6 +16,8 @@ describe('CesiumPlus', () => {
 
     expect(plus.viewer).toBe(viewer);
     expect(plus.disposed).toBe(false);
+    expect(typeof plus.camera.getCameraView).toBe('function');
+    expect(typeof plus.scene.requestRender).toBe('function');
   });
 
   it('通过 create 创建增强管理器', () => {

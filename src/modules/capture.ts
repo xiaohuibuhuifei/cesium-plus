@@ -1,7 +1,6 @@
 import type { Viewer } from 'cesium';
 
 const defaultScreenshotFormat = 'png';
-const disposedErrorMessage = 'CesiumPlus 已经释放。';
 
 export type ScreenshotFormat = 'png' | 'jpeg' | 'webp';
 
@@ -24,13 +23,6 @@ const screenshotFormats: Record<ScreenshotFormat, ScreenshotFormatDefinition> = 
     mimeType: 'image/webp',
   },
 } as const;
-
-type RemoveListener = () => void;
-
-interface PendingRenderWait {
-  readonly reject: (error: unknown) => void;
-  removeListener: RemoveListener;
-}
 
 export interface ScreenshotOptions {
   /** 输出图片格式，默认使用 png。 */
@@ -74,22 +66,29 @@ interface CaptureControllerApi extends CesiumPlusCapture {
   dispose(): void;
 }
 
-export function createCapture(viewer: Viewer, assertActive: () => void): CaptureControllerApi {
-  return new CaptureController(viewer, assertActive);
+interface CanvasLike {
+  toDataURL(type?: string, quality?: number): string;
+}
+
+export function createCapture(
+  viewer: Viewer,
+  assertActive: () => void,
+  afterNextRender: () => Promise<void>,
+): CaptureControllerApi {
+  return new CaptureController(viewer, assertActive, afterNextRender);
 }
 
 class CaptureController implements CaptureControllerApi {
-  readonly #pendingRenderWaits = new Set<PendingRenderWait>();
-
   public constructor(
     private readonly viewer: Viewer,
     private readonly assertActive: () => void,
+    private readonly afterNextRender: () => Promise<void>,
   ) {}
 
   public async screenshot(options: ScreenshotOptions = {}): Promise<string> {
     this.assertActive();
     validateScreenshotOptions(options);
-    await this.waitForNextRender();
+    await this.afterNextRender();
     this.assertActive();
     return readCanvasDataUrl(this.viewer, options);
   }
@@ -113,65 +112,12 @@ class CaptureController implements CaptureControllerApi {
   }
 
   public dispose(): void {
-    const errors: unknown[] = [];
-
-    for (const pending of [...this.#pendingRenderWaits]) {
-      this.#pendingRenderWaits.delete(pending);
-
-      try {
-        pending.removeListener();
-      } catch (error) {
-        errors.push(error);
-      }
-
-      pending.reject(new Error(disposedErrorMessage));
-    }
-
-    if (errors.length > 0) {
-      throw new AggregateError(errors, '一个或多个截图监听释放失败。');
-    }
-  }
-
-  private waitForNextRender(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const scene = this.viewer.scene;
-
-      const pending: PendingRenderWait = {
-        reject,
-        removeListener: () => undefined,
-      };
-
-      const finish = () => {
-        if (!this.#pendingRenderWaits.delete(pending)) {
-          return;
-        }
-
-        try {
-          pending.removeListener();
-        } catch (error) {
-          reject(error);
-          return;
-        }
-
-        resolve();
-      };
-
-      pending.removeListener = scene.postRender.addEventListener(finish);
-      this.#pendingRenderWaits.add(pending);
-
-      try {
-        scene.requestRender();
-      } catch (error) {
-        this.#pendingRenderWaits.delete(pending);
-        pending.removeListener();
-        reject(error);
-      }
-    });
+    // capture 没有自己的常驻资源，等待中的渲染由 scene 模块统一释放
   }
 }
 
 function readCanvasDataUrl(viewer: Viewer, options: ScreenshotOptions): string {
-  const canvas = viewer.scene.canvas as HTMLCanvasElement;
+  const canvas = getCanvas(viewer);
   const mimeType = getScreenshotFormat(options).mimeType;
 
   if (options.quality === undefined) {
@@ -223,4 +169,24 @@ function validateFilename(filename: string): void {
   if (typeof filename !== 'string' || filename.trim().length === 0) {
     throw new TypeError('capture.downloadScreenshot filename 必须是非空字符串。');
   }
+}
+
+function getCanvas(viewer: Viewer): CanvasLike {
+  const scene = (viewer as { readonly scene?: unknown }).scene;
+
+  if (!scene || typeof scene !== 'object') {
+    throw new Error('capture 模块需要有效的 Cesium Scene。');
+  }
+
+  const canvas = (scene as { readonly canvas?: unknown }).canvas;
+
+  if (
+    !canvas ||
+    typeof canvas !== 'object' ||
+    typeof (canvas as CanvasLike).toDataURL !== 'function'
+  ) {
+    throw new Error('capture 模块需要可导出的画布。');
+  }
+
+  return canvas as CanvasLike;
 }

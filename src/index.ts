@@ -1,9 +1,13 @@
 import type { Viewer } from 'cesium';
 
+import { createCamera } from './modules/camera.js';
+import type { CesiumPlusCamera } from './modules/camera.js';
 import { createCapture } from './modules/capture.js';
 import type { CesiumPlusCapture } from './modules/capture.js';
 import { createCoordinates } from './modules/coordinates.js';
 import type { CesiumPlusCoordinates } from './modules/coordinates.js';
+import { createScene } from './modules/scene.js';
+import type { CesiumPlusScene } from './modules/scene.js';
 
 /**
  * Cesium Plus 资源清理函数。
@@ -55,10 +59,14 @@ export class CesiumPlus {
   #disposed = false;
   /** 调用方传入的原始 Cesium Viewer；Cesium Plus 不接管它的生命周期。 */
   public readonly viewer: Viewer;
+  /** 内置相机任务能力，不进入插件列表。 */
+  public readonly camera: CesiumPlusCamera;
   /** 内置画布截图和下载能力，不需要通过插件安装。 */
   public readonly capture: CesiumPlusCapture;
   /** 内置鼠标坐标监听能力，不进入插件列表。 */
   public readonly coordinates: CesiumPlusCoordinates;
+  /** 内置场景渲染能力，不进入插件列表。 */
+  public readonly scene: CesiumPlusScene;
 
   /**
    * 创建增强管理器。
@@ -71,10 +79,20 @@ export class CesiumPlus {
     }
 
     this.viewer = viewer;
-    const capture = createCapture(viewer, () => this.#assertActive());
+    const scene = createScene(viewer, () => this.#assertActive());
+    this.scene = scene;
+    const camera = createCamera(viewer, () => this.#assertActive());
+    this.camera = camera;
+    const capture = createCapture(
+      viewer,
+      () => this.#assertActive(),
+      () => scene.afterNextRender(),
+    );
     this.capture = capture;
     const coordinates = createCoordinates(viewer, () => this.#assertActive());
     this.coordinates = coordinates;
+    this.#moduleCleanups.push(() => scene.dispose());
+    this.#moduleCleanups.push(() => camera.dispose());
     this.#moduleCleanups.push(() => capture.dispose());
     this.#moduleCleanups.push(() => coordinates.dispose());
   }
@@ -210,6 +228,13 @@ function validatePlugin(plugin: CesiumPlusPlugin): void {
 }
 
 export type {
+  CameraChangedCallback,
+  CameraView,
+  CesiumPlusCamera,
+  FlyToPointOptions,
+  LngLatPoint,
+} from './modules/camera.js';
+export type {
   CesiumPlusCapture,
   DownloadScreenshotOptions,
   ScreenshotFormat,
@@ -220,3 +245,4 @@ export type {
   CoordinatePosition,
   CoordinateWatchCallback,
 } from './modules/coordinates.js';
+export type { CesiumPlusScene } from './modules/scene.js';

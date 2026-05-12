@@ -16,8 +16,8 @@
 - 调用方创建、配置、销毁 Cesium `Viewer`。库只绑定传入的 `Viewer`，不得创建、替换、隐藏、全局缓存或接管它。
 - `cesium` 只能是 peer dependency。不要打进 bundle，不要移动到 dependencies，不要在库源码里复制或托管 Cesium 静态资源。
 - 保持 `sideEffects: false` 的承诺。库入口不得注册全局状态、DOM、样式、定时器、事件监听或 Cesium Viewer。
-- Vue、React 等框架只属于示例或宿主集成说明。库 API 不得硬耦合任何前端框架。
-- 公开 API 以 `src/index.ts`、`README.md`、`README.zh-CN.md`、`docs/api.md` 和测试共同约束；新增能力默认保持旧 API 可用；删除公开 API 必须有用户明确批准并同步文档、CHANGELOG 和测试。
+- Vue、React 等框架只属于宿主集成说明。库 API 不得硬耦合任何前端框架。
+- 公开 API 以 `src/index.ts`、`README.md`、`README.zh-CN.md`、`docs/api.md` 和测试共同约束；新增能力默认保持旧 API 可用；删除公开 API 必须有用户明确批准并同步文档和测试。
 
 ## 代码规则
 
@@ -42,16 +42,15 @@
 
 ## 文档规则
 
-- 面向全球用户的根文档默认使用英文：`README.md` 和 `CHANGELOG.md` 保持英文。
-- 中文镜像文档使用 `*.zh-CN.md`：`README.zh-CN.md` 和 `CHANGELOG.zh-CN.md`。
+- 面向全球用户的根文档默认使用英文：`README.md` 保持英文。
+- 中文镜像文档使用 `*.zh-CN.md`：`README.zh-CN.md`。
 - 改公开 API、默认行为、生命周期、发布边界或脚本时，同步英文 README、中文 README、`docs/api.md` 和测试。
-- CHANGELOG 中英文条目必须语义一致，只记录用户可见变化，不写内部重排流水账。
 
 ## 发布规则
 
 - npm 包只发布构建产物、`README.md` 和 `README.zh-CN.md`。
 - `package.json` 由 npm 必然包含，`LICENSE` 可能被 npm 自动包含；这两者不算违背发布边界。
-- 不发布 `CHANGELOG*.md`、`docs/**`、`src/**`、`test/**`、`examples/**`、`.agents/**`、`AGENTS.md`、`node_modules/**`、Cesium 静态资源或示例构建产物。
+- 不发布 `docs/**`、`src/**`、`test/**`、`examples/**`、`.agents/**`、`AGENTS.md`、`node_modules/**`、Cesium 静态资源或示例构建产物。
 - 改 `package.json.files`、`exports`、`types`、构建脚本、peer range 或发布流程后必须跑 `npm run pack:check`。
 
 ## 验证规则
@@ -70,10 +69,4 @@ npm run test
 ```sh
 npm run build
 npm run pack:check
-```
-
-示例或 Cesium 静态资源流程改动时追加：
-
-```sh
-npm run build:example
 ```

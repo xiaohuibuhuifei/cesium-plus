@@ -1,4 +1,4 @@
 interface:
   display_name: 'Cesium Plus Coding'
-  short_description: '约束 Cesium Plus API、生命周期、注释和发布'
-  default_prompt: 'Use $cesium-plus-coding to change Cesium Plus under stable public API, Cesium lifecycle, JSDoc, test, documentation, and npm release constraints.'
+  short_description: '约束 Cesium Plus 任务型 API、生命周期和发布边界'
+  default_prompt: 'Use $cesium-plus-coding to change Cesium Plus under task-oriented public API, Cesium lifecycle, validation, documentation, and npm release constraints.'

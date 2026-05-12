@@ -20,11 +20,9 @@
   "include": [
     "src/**/*.ts",
     "test/**/*.ts",
-    "examples/**/*.ts",
-    "examples/**/*.vue",
     "vite.config.ts",
     "vitest.config.ts",
     "eslint.config.js"
   ],
-  "exclude": ["dist", "node_modules", "examples/vue3/dist", "examples/vue3/public/cesium"]
+  "exclude": ["dist", "node_modules"]
 }

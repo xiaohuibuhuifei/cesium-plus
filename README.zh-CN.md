@@ -2,9 +2,9 @@
 
 [English](./README.md)
 
-面向 CesiumJS 的框架无关增强工具库。
+面向 CesiumJS 的任务型增强工具库。
 
-Cesium Plus 不修改 Cesium，不替换 `Viewer`，也不注册全局副作用。宿主应用负责创建、配置和销毁 Cesium `Viewer`；这个包只绑定调用方传入的 viewer，在 `CesiumPlus` 上提供少量内置能力，并通过插件系统提供可释放的扩展能力。
+Cesium Plus 不替换 Cesium，不创建 `Viewer`，也不隐藏原生 Cesium 对象。宿主应用负责创建、配置和销毁 Cesium `Viewer`；Cesium Plus 只绑定这个 viewer，并提供相机、场景、截图、坐标和高级插件这几类高频任务能力。
 
 ## 安装
 
@@ -23,22 +23,38 @@ import { create } from 'cesium-plus';
 const viewer = new Viewer('cesiumContainer');
 const plus = create(viewer);
 
+plus.camera.setCameraView({
+  lng: 116.3913,
+  lat: 39.9075,
+  alt: 6500,
+  pitch: -45,
+});
+
+plus.camera.watchCameraChanged((view) => {
+  console.log(view.lng, view.lat, view.alt);
+});
+
+plus.scene.requestRender();
+await plus.scene.afterNextRender();
+
+const dataUrl = await plus.capture.screenshot({
+  format: 'jpeg',
+  quality: 0.9,
+});
+
 if (plus.coordinates.canWatchMouse) {
   plus.coordinates.watchMouse(({ longitude, latitude, height }) => {
-    console.log(`${longitude.toFixed(6)}, ${latitude.toFixed(6)}, ${height.toFixed(1)}m`);
+    console.log(longitude, latitude, height);
   });
 }
 
-// 在下一帧渲染后截图。
-const dataUrl = await plus.capture.screenshot({ format: 'jpeg', quality: 0.9 });
-await plus.capture.downloadScreenshot({ filename: 'map.jpeg', format: 'jpeg' });
-
+console.log(dataUrl);
 plus.dispose();
 ```
 
-`create(viewer)` 只创建增强管理器，不创建、不销毁、不替换 Cesium `Viewer`。
+`create(viewer)` 只会创建增强管理器，不会创建、销毁或替换 Cesium `Viewer`。
 
-`dispose()` 会释放已安装插件和内置监听。等待中的截图会被拒绝；调用方没有手动清理的坐标监听也会被兜底释放。
+`dispose()` 会释放已安装插件和内置监听。等待中的截图、场景渲染等待和相机飞行会被拒绝；调用方没有手动清理的坐标监听和相机监听会被兜底释放。
 
 完整 API 参考见 [docs/api.md](./docs/api.md)。
 
@@ -46,25 +62,17 @@ plus.dispose();
 
 - Cesium Plus 是 CesiumJS 增强库，不是应用框架，也不是 CesiumJS 替代品。
 - 宿主应用拥有 Cesium `Viewer` 生命周期。
+- `viewer` 会继续暴露给调用方，作为高级 Cesium 用法的逃生口。
 - Cesium Plus 不打包 Cesium 静态资源。运行时资源必须由宿主应用托管。
-- Vue、React 等框架集成属于宿主应用或示例代码，不进入库 API。
+- 当前仓库不再内置 demo 工程。宿主集成和演示项目应放在业务应用或独立 demo 仓库里。
 
 ## 框架集成
 
-Vue、React 等框架应在自己的生命周期里创建 Cesium `Viewer`，把它传给
-`create(viewer)`，并在卸载时调用 `dispose()`。
+Vue、React 等框架应在自己的生命周期里创建 Cesium `Viewer`，把它传给 `create(viewer)`，并在卸载时调用 `dispose()`。
 
 ## Cesium 静态资源
 
 CesiumJS 运行时需要由宿主应用托管静态资源。这个配置应该留在应用侧，不要藏进增强库里。
-
-运行内置 Vue 3 + Vite 示例站：
-
-```sh
-npm run dev:example
-```
-
-示例站按功能拆成独立路由：首页是带快捷筛选的入口卡片列表，详情页固定为左侧大地图、右侧窄说明栏。当前入口覆盖 quick start、鼠标坐标、截图和基础插件四类示例。
 
 ## 脚本
 
@@ -72,10 +80,8 @@ npm run dev:example
 npm run lint
 npm run typecheck
 npm run test
-npm run test:example
-npm run test:full
 npm run build
-npm run build:example
+npm run test:full
 npm run pack:check
 npm run release:check
 npm run release:dry-run
